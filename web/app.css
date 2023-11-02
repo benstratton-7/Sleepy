@@ -1,0 +1,12 @@
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    height: 100%;
+    grid-gap: 0;
+    margin: 0;
+}
+
+.grid-item {
+    border: 1px solid #ccc;
+    padding: 0;
+}
