@@ -1,5 +1,6 @@
 var loopRunning = false
 var OurLeagueID = '964266473902419968'
+var intervalId = null;
 var StoredLeagueID = localStorage.getItem("LeagueID")
 var currentWeek = fetchCurrentWeek()
 
@@ -19,7 +20,7 @@ async function fetchLeagueData(lid){
 
 //gets a list containing all matchups from the given league and week number
 async function fetchMatchups(lid, week){
-    return fetch(`https://api.sleeper.com/v1/league/${lid}/matchups/${week}`)
+    return fetch(`https://api.sleeper.app/v1/league/${lid}/matchups/${week}`)
     .then(response => response.json())
     .then(data => data);
 }
@@ -40,9 +41,13 @@ async function fetchDisplayName(uid){
 
 // pulls display name and scores from fetchs
 async function getContent(lid, week){
-    try{
-        var matchups = await fetchMatchups(lid, week);
-        var rosters = await fetchRosters(lid);
+    try {
+                var matchups = await fetchMatchups(lid, week);
+                var rosters = await fetchRosters(lid);
+    } catch (error) {
+        throw new Error(`Error in fetching calls within getContent():${error}`);
+    }
+    try {
         var results = [];
         for(const matchup of matchups){
             var matchup_id = matchup.matchup_id
@@ -53,11 +58,12 @@ async function getContent(lid, week){
             results.push({displayName, points: matchup.points, matchup_id});
         }
         return results;
-    } catch (error){
-        throw new Error(`Error in your getContent function: ${error}`)
+    } catch (error) {
+        throw new Error(`error in looping through matchups in getContent():${error}`)
     }
 }
 
+// creates and populates the container with the correct ids and classes
 async function init(){
     leaderBoardContainer.innerHTML = 'Loading...'
     leagueID = StoredLeagueID
@@ -69,72 +75,76 @@ async function init(){
     for(let i = 1; i<=total_rosters/2; i ++){
         const leaderBoardItem = document.createElement('div');
         leaderBoardItem.classList.add('leaderboard-item');
+        const team1 = document.createElement('div');
+        const scorebox = document.createElement('div');
+        const score1 = document.createElement('div');
+        const score2 = document.createElement('div');
+        const team2 = document.createElement('div');
+        const sep = document.createElement('hr');
+        team1.classList.add('team-name');
+        scorebox.classList.add('score-box');
+        score1.classList.add('score');
+        score2.classList.add('score');
+        team2.classList.add('team-name')
         data.forEach(item =>{
-            //move the document.createElements outside of the forEach statement, so they are created once for each container item. dont forget to set each id of the smaller divs so we can know what goes where
-            //then we can do the foreach and if matchup_id == i we can add the data by id to the layout.
-            if (item.matchup_id == i && ~document.getElementById(`${i*2 - 1}`)){
-                const team1 = document.createElement('div');
-                const scorebox = document.createElement('div');
-                const score1 = document.createElement('div');
-                const score2 = document.createElement('div');
-                const team2 = document.createElement('div');
-                team1.classList.add('team-name');
-                scorebox.classList.add('score-box');
-                score1.classList.add('score');
-                score2.classList.add('score');
-                team2.classList.add('team-name')
-                team1.setAttribute('id', `${i*2 - 1}`)
-                team2.setAttribute('id', `${i*2}`)
+            if ((item.matchup_id == i)){
+                team1.setAttribute('id', `team-${i*2 - 1}`)
+                team2.setAttribute('id', `team-${i*2}`)
+                score1.setAttribute('id', `score-${i*2-1}`)
+                score2.setAttribute('id', `score-${i*2}`)
                 team1.innerHTML = `Team ${i*2 - 1}`;
                 team2.innerHTML = `Team ${i*2}`
                 score1.innerHTML = '0'
                 score2.innerHTML = '0'
-                scorebox.appendChild(score1)
-                scorebox.appendChild(score2)
-                leaderBoardItem.appendChild(team1)
-                leaderBoardItem.appendChild(scorebox)
-                leaderBoardItem.appendChild(team2);
             }
-        })
+        });
+        scorebox.appendChild(score1)
+        scorebox.appendChild(sep)
+        scorebox.appendChild(score2)
+        leaderBoardItem.appendChild(team1)
+        leaderBoardItem.appendChild(scorebox)
+        leaderBoardItem.appendChild(team2);
         leaderBoardContainer.appendChild(leaderBoardItem);
     }
 }
-// data.forEach(item =>{
-//     const leaderBoardItem = document.createElement('div');
-//     leaderBoardItem.classList.add('leaderboard-item');
-//     leaderBoardItem.innerHTML = `
-//     <p>${item.displayName}</p>
-//     <p>${item.points}</p>`;
-//     leaderBoardContainer.appendChild(leaderBoardItem)
-// })
 
-async function setContent(){
-    var data = await getContent()
-}
 
-// var week = await fetchCurrentWeek()
-async function looper(LID){
-    var week = await currentWeek;
-    loopRunning = true;
-    async function runLoop(){
-        console.log("get content:", await getContent(LID, week))
-        if(loopRunning) {
-            setTimeout(runLoop, 5 * 1000)
-        }
+async function setContent(LID, week){
+    try {
+        const leaderboardItems = Array.from(document.querySelectorAll('.leaderboard-item'))
+        // const newData = await getContent(LID, week);
+        leaderboardItems.forEach(div => {
+            for(const child of div.getElementsByTagName('div')){
+                if(child.id endswith)
+                // console.log(child.id)
+            }
+        });
+    } catch (error) {
+        console.error(`Error updating leaderboard: ${error.message}`);
     }
-    runLoop();
 }
 
-const testButton = document.getElementById("testButton")
+
+async function looper() {
+    const leag = StoredLeagueID;
+    const week = await currentWeek;
+    intervalId = setInterval(async () => {
+        await setContent(leag, week);
+    }, 5 * 1000);
+}
+
 async function handle(){
     console.log("Clicked!")
     if (loopRunning){
-        loopRunning = false
-        console.log("turning off")
+        loopRunning = false;
+        clearInterval(intervalId);
+        console.log("turning off");
     } else{
+        loopRunning = true
         console.log("turning on")
-        await looper(StoredLeagueID)
+        await looper()
     }
 }
-init();
+const testButton = document.getElementById("testButton")
 testButton.addEventListener("click", handle);
+init();
