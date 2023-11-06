@@ -55,8 +55,9 @@ async function getContent(lid, week){
             var roster = rosters.find(roster => roster.roster_id === roster_id);
             var uid = roster.owner_id;
             var displayName = await fetchDisplayName(uid);
-            results.push({displayName, points: matchup.points, matchup_id});
+            results.push({displayName, points: matchup.points, matchup_id, roster_id});
         }
+        console.log(results)
         return results;
     } catch (error) {
         throw new Error(`error in looping through matchups in getContent():${error}`)
@@ -88,14 +89,17 @@ async function init(){
         team2.classList.add('team-name')
         data.forEach(item =>{
             if ((item.matchup_id == i)){
-                team1.setAttribute('id', `team-${i*2 - 1}`)
+                team1.setAttribute('id', `${item.roster_id}`)
                 team2.setAttribute('id', `team-${i*2}`)
                 score1.setAttribute('id', `score-${i*2-1}`)
                 score2.setAttribute('id', `score-${i*2}`)
                 team1.innerHTML = `Team ${i*2 - 1}`;
                 team2.innerHTML = `Team ${i*2}`
-                score1.innerHTML = '0'
-                score2.innerHTML = '0'
+                score1.innerHTML = `${item.points}`
+                score2.innerHTML = `${item.points}`
+                //looks like all my problems are coming from not having a intelligent structure so I cant dynamically update everything without issue. Check this next see of there is a smarter
+                //way to iterate over the data OR iterate over the dom structure?? probably just itereate over the data better that makes more sense actually.
+                //maybe use data.find or something to put the correct machups together??
             }
         });
         scorebox.appendChild(score1)
@@ -110,18 +114,19 @@ async function init(){
 
 
 async function setContent(LID, week){
-    try {
-        const leaderboardItems = Array.from(document.querySelectorAll('.leaderboard-item'))
-        // const newData = await getContent(LID, week);
-        leaderboardItems.forEach(div => {
-            for(const child of div.getElementsByTagName('div')){
-                if(child.id endswith)
-                // console.log(child.id)
+    const leaderboardItems = Array.from(document.querySelectorAll('.leaderboard-item'))
+    const newData = await getContent(LID, week);
+    leaderboardItems.forEach(div => {
+        for(const child of div.getElementsByTagName('div')){
+            if(child.classList == "score"){
+                let childID = child.id.charAt(child.id.length - 1);
+                let newChild = newData.find(newData=>newData.placementID == childID);
+                if(newChild){
+                    console.log("existed")
+                }
             }
-        });
-    } catch (error) {
-        console.error(`Error updating leaderboard: ${error.message}`);
-    }
+        }
+    });
 }
 
 
@@ -130,6 +135,7 @@ async function looper() {
     const week = await currentWeek;
     intervalId = setInterval(async () => {
         await setContent(leag, week);
+        console.log("looped")
     }, 5 * 1000);
 }
 
